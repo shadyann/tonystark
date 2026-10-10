@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>shadyann — мини-реактор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050b14; --bg2:#0a1a2c; --ink:#e8f6ff; --muted:#7fa3bd;
+  --glow:#4de3ff; --glow2:#1b9fd1; --warn:#ff6a3d; --line:rgba(77,227,255,.22);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#eaf4fa; --bg2:#d3e7f3; --ink:#07253a; --muted:#44677f;
+    --glow:#0a8fb8; --glow2:#0b6f93; --line:rgba(10,143,184,.3);
+  }
+}
+:root[data-theme="light"]{--bg:#eaf4fa;--bg2:#d3e7f3;--ink:#07253a;--muted:#44677f;--glow:#0a8fb8;--glow2:#0b6f93;--line:rgba(10,143,184,.3)}
+:root[data-theme="dark"]{--bg:#050b14;--bg2:#0a1a2c;--ink:#e8f6ff;--muted:#7fa3bd;--glow:#4de3ff;--glow2:#1b9fd1;--line:rgba(77,227,255,.22)}
+*{box-sizing:border-box;margin:0}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  min-height:100%;background:radial-gradient(ellipse at 50% 38%,var(--bg2) 0%,var(--bg) 62%);
+  color:var(--ink);font-family:"Exo 2",system-ui,sans-serif;font-weight:300;
+  display:flex;flex-direction:column;align-items:center;padding:40px 20px 56px;overflow-x:hidden;
+}
+body::before{ /* технический сетчатый фон */
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:56px 56px;
+  -webkit-mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 70%);
+  mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 70%);
+}
+main{position:relative;width:100%;max-width:640px;display:flex;flex-direction:column;align-items:center;text-align:center}
+h1{
+  font-family:"Russo One","Arial Black",sans-serif;font-weight:400;
+  font-size:clamp(2.6rem,12vw,5.2rem);letter-spacing:.06em;line-height:1;
+  background:linear-gradient(180deg,var(--ink) 20%,var(--glow) 130%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 22px color-mix(in srgb,var(--glow) 45%,transparent));
+}
+.sub{margin-top:12px;color:var(--muted);font-size:1.05rem;letter-spacing:.04em}
+
+/* Реактор */
+.reactor{position:relative;width:min(78vw,380px);aspect-ratio:1;margin:34px 0 28px}
+.reactor svg{width:100%;height:100%;overflow:visible}
+.halo{position:absolute;inset:-18%;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--glow) 55%,transparent) 0%,transparent 62%);
+  animation:pulse 3.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
+.ring-a{transform-origin:200px 200px;animation:spin 40s linear infinite}
+.ring-b{transform-origin:200px 200px;animation:spin 26s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.coil{fill:color-mix(in srgb,var(--glow) 14%,transparent);stroke:var(--glow);stroke-width:2.2;
+  filter:drop-shadow(0 0 6px var(--glow));
+  transform-box:fill-box;transform-origin:center;transition:transform .6s cubic-bezier(.2,.9,.3,1),opacity .4s}
+.coil.out{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r)) scale(.4)}
+.core{fill:var(--glow);filter:drop-shadow(0 0 16px var(--glow));animation:flicker 4s ease-in-out infinite}
+@keyframes flicker{0%,100%{opacity:1}46%{opacity:.82}50%{opacity:1}54%{opacity:.9}}
+.reactor.rebuilding .core{opacity:.25;animation:none}
+
+/* Показатели */
+.stats{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+.panel{
+  text-align:left;padding:18px 18px 16px;border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--glow) 9%,transparent),transparent 70%);
+  backdrop-filter:blur(6px);
+}
+.panel.wide{grid-column:1/-1}
+.label{font-size:.82rem;color:var(--muted);letter-spacing:.05em}
+.value{font-family:"Russo One","Arial Black",sans-serif;font-size:2rem;margin-top:6px;color:var(--ink)}
+.value small{font-family:"Exo 2",sans-serif;font-size:1rem;color:var(--glow);margin-left:6px;font-weight:600}
+.status{display:flex;align-items:center;gap:10px;font-family:"Russo One",sans-serif;font-size:1.25rem;margin-top:8px;color:var(--glow)}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--glow);box-shadow:0 0 12px var(--glow);animation:pulse 1.8s ease-in-out infinite}
+.status.off{color:var(--warn)}.status.off .dot{background:var(--warn);box-shadow:0 0 12px var(--warn)}
+.bar{height:8px;border-radius:99px;background:color-mix(in srgb,var(--glow) 14%,transparent);margin-top:14px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:inherit;
+  background:linear-gradient(90deg,var(--glow2),var(--glow));box-shadow:0 0 12px var(--glow);
+  transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+
+.quote{margin-top:30px;max-width:30em;font-size:1.08rem;line-height:1.65;color:var(--ink);font-weight:300}
+.quote::before{content:"“";display:block;font-family:"Russo One",sans-serif;font-size:2.4rem;line-height:.6;color:var(--glow);margin-bottom:8px}
+
+button{
+  margin-top:34px;font:inherit;font-weight:600;font-size:1.05rem;letter-spacing:.03em;color:var(--ink);
+  padding:16px 30px;border-radius:999px;cursor:pointer;
+  border:1.5px solid var(--glow);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--glow) 24%,transparent),color-mix(in srgb,var(--glow) 6%,transparent));
+  box-shadow:0 0 24px color-mix(in srgb,var(--glow) 35%,transparent),inset 0 0 18px color-mix(in srgb,var(--glow) 18%,transparent);
+  transition:transform .15s,box-shadow .2s;
+}
+footer{margin-top:44px;font-family:"Russo One",sans-serif;font-size:1rem;letter-spacing:.12em;color:var(--muted)}
+footer b{font-weight:400;color:var(--glow);text-shadow:0 0 14px var(--glow)}
+button:hover{box-shadow:0 0 38px color-mix(in srgb,var(--glow) 60%,transparent),inset 0 0 22px color-mix(in srgb,var(--glow) 28%,transparent)}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.6;cursor:progress}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>ТОНИ СТАРК</h1>
+  <p class="sub">собрал мини-реактор сидя в яме</p>
+
+  <div class="reactor" id="reactor" aria-hidden="true">
+    <div class="halo"></div>
+    <svg viewBox="0 0 400 400">
+      <g class="ring-a">
+        <circle cx="200" cy="200" r="190" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 9"/>
+        <circle cx="200" cy="200" r="178" fill="none" stroke="var(--glow)" stroke-opacity=".5" stroke-width="2"/>
+      </g>
+      <g class="ring-b">
+        <circle cx="200" cy="200" r="160" fill="none" stroke="var(--glow2)" stroke-width="3" stroke-dasharray="40 14 8 14"/>
+      </g>
+      <circle cx="200" cy="200" r="132" fill="none" stroke="var(--glow)" stroke-opacity=".6" stroke-width="2"/>
+      <g id="coils"></g>
+      <circle cx="200" cy="200" r="70" fill="none" stroke="var(--glow)" stroke-width="2.5" style="filter:drop-shadow(0 0 8px var(--glow))"/>
+      <polygon class="core" points="200,148 245,226 155,226"/>
+      <circle cx="200" cy="200" r="16" fill="var(--bg)" opacity=".85"/>
+    </svg>
+  </div>
+
+  <section class="stats" aria-label="Показатели реактора">
+    <div class="panel wide">
+      <div class="label">Питание</div>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">ОНЛАЙН</span></div>
+    </div>
+    <div class="panel">
+      <div class="label">Мощность</div>
+      <div class="value"><span id="power">8.3</span><small>ГВт</small></div>
+    </div>
+    <div class="panel">
+      <div class="label">Палладий</div>
+      <div class="value"><span id="pd">24</span><small>%</small></div>
+      <div class="bar"><i id="pdBar"></i></div>
+    </div>
+  </section>
+
+  <p class="quote">Да, я в яме. Да, без инструментов. Но я гений, и я сделаю это одной левой.</p>
+
+  <button id="rebuild" type="button">🔧 Пересобрать реактор</button>
+  <footer>by.<b>shadyann</b></footer>
+</main>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg", N=10, coilsG=document.getElementById("coils"), coils=[];
+  var CX=200, CY=200, R1=76, R2=128, GAP=.07;
+  function pt(r,a){return (CX+r*Math.cos(a)).toFixed(1)+","+(CY+r*Math.sin(a)).toFixed(1)}
+  for(var i=0;i<N;i++){
+    var a0=i*2*Math.PI/N+GAP, a1=(i+1)*2*Math.PI/N-GAP;
+    var p=document.createElementNS(NS,"path");
+    p.setAttribute("d","M"+pt(R1,a0)+" L"+pt(R2,a0)+" A"+R2+","+R2+" 0 0 1 "+pt(R2,a1)+" L"+pt(R1,a1)+" A"+R1+","+R1+" 0 0 0 "+pt(R1,a0)+"Z");
+    p.setAttribute("class","coil");
+    var mid=(a0+a1)/2;
+    p.style.setProperty("--dx",(Math.cos(mid)*160).toFixed(0)+"px");
+    p.style.setProperty("--dy",(Math.sin(mid)*160).toFixed(0)+"px");
+    p.style.setProperty("--r",(Math.random()*120-60).toFixed(0)+"deg");
+    coilsG.appendChild(p); coils.push(p);
+  }
+
+  var power=document.getElementById("power"), pd=document.getElementById("pd"),
+      bar=document.getElementById("pdBar"), btn=document.getElementById("rebuild"),
+      reactor=document.getElementById("reactor"), status=document.getElementById("status"),
+      statusText=document.getElementById("statusText");
+  var cur={p:8.3,d:24};
+  bar.style.width="24%";
+
+  function animate(toP,toD,ms){
+    var t0=performance.now(), p0=cur.p, d0=cur.d;
+    (function f(t){
+      var k=Math.min(1,(t-t0)/ms), e=1-Math.pow(1-k,3);
+      cur.p=p0+(toP-p0)*e; cur.d=d0+(toD-d0)*e;
+      power.textContent=cur.p.toFixed(1); pd.textContent=Math.round(cur.d);
+      if(k<1) requestAnimationFrame(f);
+    })(t0);
+    bar.style.width=toD+"%";
+  }
+  var wait=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+
+  btn.addEventListener("click",async function(){
+    btn.disabled=true;
+    reactor.classList.add("rebuilding");
+    status.classList.add("off"); statusText.textContent="СБОРКА…";
+    coils.forEach(function(c){c.classList.add("out")});
+    animate(0,0,500);
+    await wait(700);
+    for(var i=0;i<coils.length;i++){
+      coils[i].classList.remove("out"); await wait(140);
+    }
+    var np=+(6+Math.random()*5).toFixed(1), nd=Math.round(15+Math.random()*75);
+    reactor.classList.remove("rebuilding");
+    status.classList.remove("off"); statusText.textContent="ОНЛАЙН";
+    animate(np,nd,1100);
+    await wait(900);
+    btn.disabled=false;
+  });
+})();
+</script>
+</body>
+</html>
